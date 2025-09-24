@@ -983,4 +983,5 @@ window.toggleTaskComplete = toggleTaskComplete;
 window.deleteTask = deleteTask;
 window.deleteInfo = deleteInfo;
 window.toggleTaskDetails = toggleTaskDetails;
+
 window.syncWithCalendar = syncWithCalendar;
