@@ -985,3 +985,4 @@ window.deleteInfo = deleteInfo;
 window.toggleTaskDetails = toggleTaskDetails;
 
 window.syncWithCalendar = syncWithCalendar;
+
