@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Quest - Google Sheets Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Authentication Section -->
+        <div id="authSection" class="auth-section">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h1>🎯 Life Quest</h1>
+                    <p>Your gamified task manager powered by Google Sheets</p>
+                </div>
+                <div class="auth-content">
+                    <div class="auth-benefits">
+                        <div class="benefit-item">
+                            <span class="benefit-icon">☁️</span>
+                            <span>Cloud sync with Google Sheets</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="benefit-icon">📅</span>
+                            <span>Google Calendar integration</span>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="benefit-icon">🎮</span>
+                            <span>Gamified productivity tracking</span>
+                        </div>
+                    </div>
+                    <button id="signInBtn" class="sign-in-btn">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-logo">
+                        Sign in with Google
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Section -->
+        <div id="appSection" class="app-section" style="display: none;">
+            <!-- Header with Gamification Stats -->
+            <header class="app-header">
+                <div class="container">
+                    <div class="header-content">
+                        <div class="app-title">
+                            <h1>🎯 Life Quest</h1>
+                            <div class="sync-status">
+                                <span id="syncStatus" class="sync-indicator">🔄 Syncing...</span>
+                            </div>
+                        </div>
+                        <div class="user-info">
+                            <img id="userPhoto" class="user-photo" alt="User">
+                            <span id="userName" class="user-name"></span>
+                            <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
+                        </div>
+                        <div class="stats-bar">
+                            <div class="stat-item">
+                                <span class="stat-icon">⭐</span>
+                                <span class="stat-value" id="points">0</span>
+                                <span class="stat-label">Points</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">🔥</span>
+                                <span class="stat-value" id="streak">0</span>
+                                <span class="stat-label">Day Streak</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">📊</span>
+                                <span class="stat-value" id="level">Level 1</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="dailyProgress"></div>
+                        </div>
+                        <span class="progress-text">Daily Progress</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <nav class="nav-tabs">
+                <div class="container">
+                    <button class="nav-tab active" data-tab="tasks">📋 Tasks</button>
+                    <button class="nav-tab" data-tab="info">💡 Important Info</button>
+                    <button class="nav-tab" data-tab="calendar">📅 Calendar</button>
+                </div>
+            </nav>
+
+            <!-- Tab Content -->
+            <main class="main-content">
+                <div class="container">
+                    <!-- Tasks Tab -->
+                    <div id="tasksTab" class="tab-content active">
+                        <div class="tab-header">
+                            <h2>My Tasks</h2>
+                            <button id="addTaskBtn" class="add-btn">+ Add Task</button>
+                        </div>
+                        <div id="tasksList" class="tasks-list">
+                            <div class="loading">Loading tasks...</div>
+                        </div>
+                    </div>
+
+                    <!-- Important Info Tab -->
+                    <div id="infoTab" class="tab-content">
+                        <div class="tab-header">
+                            <h2>Important Information</h2>
+                            <button id="addInfoBtn" class="add-btn">+ Add Info</button>
+                        </div>
+                        <div id="importantInfoList" class="info-list">
+                            <div class="loading">Loading information...</div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Tab -->
+                    <div id="calendarTab" class="tab-content">
+                        <div class="tab-header">
+                            <h2>Calendar Integration</h2>
+                            <button id="syncCalendarBtn" class="sync-btn">🔄 Sync with Calendar</button>
+                        </div>
+                        <div class="calendar-info">
+                            <p>Your tasks with deadlines will be automatically synced to Google Calendar.</p>
+                            <div id="calendarEvents" class="calendar-events">
+                                <div class="loading">Loading calendar events...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Task Modal -->
+        <div id="taskModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Add New Task</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="taskForm">
+                    <div class="form-group">
+                        <label for="taskTitle">Title *</label>
+                        <input type="text" id="taskTitle" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskDescription">Description</label>
+                        <textarea id="taskDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="taskPriority">Priority *</label>
+                            <select id="taskPriority" name="priority" required>
+                                <option value="High">High</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskDueDate">Due Date *</label>
+                            <input type="datetime-local" id="taskDueDate" name="dueDate" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="taskRecurring" name="isRecurring">
+                                Recurring Task
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="recurringType">Repeat Every</label>
+                            <select id="recurringType" name="recurringType" disabled>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="yearly">Yearly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="addToCalendar" name="addToCalendar" checked>
+                            Add to Google Calendar
+                        </label>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary close-modal">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Info Modal -->
+        <div id="infoModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Add Important Information</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <form id="infoForm">
+                    <div class="form-group">
+                        <label for="infoTitle">Title *</label>
+                        <input type="text" id="infoTitle" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="infoContent">Content *</label>
+                        <textarea id="infoContent" name="content" rows="5" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="infoCategory">Category</label>
+                        <input type="text" id="infoCategory" name="category" placeholder="e.g., Work, Personal, Health">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary close-modal">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Information</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Notification Container -->
+        <div id="notifications" class="notifications"></div>
+    </div>
+
+    <script src="sheets-app.js"></script>
+</body>
+</html>
