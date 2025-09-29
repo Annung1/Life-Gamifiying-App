@@ -12,7 +12,11 @@ window.gisLoaded = gisLoaded;
 // Google API Configuration
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 const CALENDAR_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar';
+const SCOPES =
+  'openid email profile ' +
+  'https://www.googleapis.com/auth/spreadsheets ' +
+  'https://www.googleapis.com/auth/calendar';
+
 
 // Your Google Cloud Project credentials (REPLACE WITH YOUR OWN)
 const CLIENT_ID = "774756685824-gumlet0m3gqtk7fb9b181a7cpe6ioh6t.apps.googleusercontent.com";
@@ -987,6 +991,7 @@ document.addEventListener('DOMContentLoaded', function() {
     gisLoaded();
   }
 });
+
 
 
 
