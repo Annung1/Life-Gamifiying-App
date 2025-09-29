@@ -986,4 +986,9 @@ window.toggleTaskDetails = toggleTaskDetails;
 
 window.syncWithCalendar = syncWithCalendar;
 
+window.gapiLoaded = gapiLoaded;
+window.gisLoaded = gisLoaded;
+
+
+
 
