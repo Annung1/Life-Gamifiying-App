@@ -1,3 +1,14 @@
+// Make functions available globally for HTML onclick handlers
+window.toggleTaskComplete = toggleTaskComplete;
+window.deleteTask = deleteTask;
+window.deleteInfo = deleteInfo;
+window.toggleTaskDetails = toggleTaskDetails;
+
+window.syncWithCalendar = syncWithCalendar;
+
+window.gapiLoaded = gapiLoaded;
+window.gisLoaded = gisLoaded;
+
 // Google API Configuration
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 const CALENDAR_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
@@ -978,16 +989,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Make functions available globally for HTML onclick handlers
-window.toggleTaskComplete = toggleTaskComplete;
-window.deleteTask = deleteTask;
-window.deleteInfo = deleteInfo;
-window.toggleTaskDetails = toggleTaskDetails;
 
-window.syncWithCalendar = syncWithCalendar;
 
-window.gapiLoaded = gapiLoaded;
-window.gisLoaded = gisLoaded;
 
 
 
