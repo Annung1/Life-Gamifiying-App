@@ -19,7 +19,6 @@ const CLIENT_ID = "774756685824-gumlet0m3gqtk7fb9b181a7cpe6ioh6t.apps.googleuser
 const API_KEY = "AIzaSyCVaEWYpxyx1vFTUzrPTXCKlLWlMdr1F18";
 
 // App State
-let gapi;
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
@@ -988,6 +987,7 @@ document.addEventListener('DOMContentLoaded', function() {
     gisLoaded();
   }
 });
+
 
 
 
