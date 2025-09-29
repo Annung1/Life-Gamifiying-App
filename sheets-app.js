@@ -4,8 +4,8 @@ const CALENDAR_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/cal
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar';
 
 // Your Google Cloud Project credentials (REPLACE WITH YOUR OWN)
-const CLIENT_ID = '774756685824-gumlet0m3gqtk7fb9b181a7cpe6ioh6t.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyCVaEWYpxyx1vFTUzrPTXCKlLWlMdr1F18';
+const CLIENT_ID = "774756685824-gumlet0m3gqtk7fb9b181a7cpe6ioh6t.apps.googleusercontent.com";
+const API_KEY = "AIzaSyCVaEWYpxyx1vFTUzrPTXCKlLWlMdr1F18";
 
 // App State
 let gapi;
@@ -985,4 +985,5 @@ window.deleteInfo = deleteInfo;
 window.toggleTaskDetails = toggleTaskDetails;
 
 window.syncWithCalendar = syncWithCalendar;
+
 
