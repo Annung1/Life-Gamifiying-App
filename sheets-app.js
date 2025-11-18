@@ -3,9 +3,7 @@ window.toggleTaskComplete = toggleTaskComplete;
 window.deleteTask = deleteTask;
 window.deleteInfo = deleteInfo;
 window.toggleTaskDetails = toggleTaskDetails;
-
 window.syncWithCalendar = syncWithCalendar;
-
 window.gapiLoaded = gapiLoaded;
 window.gisLoaded = gisLoaded;
 
@@ -17,8 +15,7 @@ const SCOPES =
   'https://www.googleapis.com/auth/spreadsheets ' +
   'https://www.googleapis.com/auth/calendar';
 
-
-// Your Google Cloud Project credentials (REPLACE WITH YOUR OWN)
+// Your Google Cloud Project credentials
 const CLIENT_ID = "774756685824-gumlet0m3gqtk7fb9b181a7cpe6ioh6t.apps.googleusercontent.com";
 const API_KEY = "AIzaSyCVaEWYpxyx1vFTUzrPTXCKlLWlMdr1F18";
 
@@ -46,7 +43,7 @@ let appData = {
   ]
 };
 
-// Initialize APIs
+// ===== AUTHENTICATION =====
 function gapiLoaded() {
   gapi.load('client', initializeGapiClient);
 }
@@ -74,10 +71,41 @@ function maybeEnableButtons() {
   if (gapiInited && gisInited) {
     document.getElementById('signInBtn').style.display = 'block';
     setupEventListeners();
+    // Check for saved authentication
+    checkSavedAuth();
   }
 }
 
-// Authentication
+// Check for saved auth on page load
+async function checkSavedAuth() {
+  const savedToken = localStorage.getItem('lifequest_auth_token');
+  const savedUser = localStorage.getItem('lifequest_user_data');
+  
+  if (savedToken && savedUser) {
+    try {
+      // Set the saved token
+      gapi.client.setToken(JSON.parse(savedToken));
+      currentUser = JSON.parse(savedUser);
+      
+      // Verify token is still valid
+      const response = await gapi.client.request({
+        'path': 'https://www.googleapis.com/oauth2/v2/userinfo',
+      });
+      
+      if (response.result) {
+        // Token is valid, auto-sign in
+        await continueSignIn();
+        showNotification('✅ Automatically signed in!');
+      }
+    } catch (error) {
+      // Token expired, clear saved data
+      localStorage.removeItem('lifequest_auth_token');
+      localStorage.removeItem('lifequest_user_data');
+      console.log('Saved token expired');
+    }
+  }
+}
+
 function handleAuthClick() {
   tokenClient.callback = async (resp) => {
     if (resp.error !== undefined) {
@@ -101,23 +129,31 @@ async function handleSignIn() {
     });
 
     currentUser = response.result;
+    
+    // Save auth data for "remember me"
+    const token = gapi.client.getToken();
+    localStorage.setItem('lifequest_auth_token', JSON.stringify(token));
+    localStorage.setItem('lifequest_user_data', JSON.stringify(currentUser));
 
-    // Update UI
-    document.getElementById('authSection').style.display = 'none';
-    document.getElementById('appSection').style.display = 'block';
-    document.getElementById('userName').textContent = currentUser.name;
-    document.getElementById('userPhoto').src = currentUser.picture;
-
-    // Initialize or create spreadsheet
-    await initializeSpreadsheet();
-    await loadAllData();
-
+    await continueSignIn();
     showNotification('✅ Successfully signed in and synced with Google Sheets!');
 
   } catch (error) {
     console.error('Sign in error:', error);
     showNotification('❌ Failed to sign in. Please try again.');
   }
+}
+
+async function continueSignIn() {
+  // Update UI
+  document.getElementById('authSection').style.display = 'none';
+  document.getElementById('appSection').style.display = 'block';
+  document.getElementById('userName').textContent = currentUser.name;
+  document.getElementById('userPhoto').src = currentUser.picture;
+
+  // Initialize or retrieve spreadsheet
+  await initializeSpreadsheet();
+  await loadAllData();
 }
 
 function handleSignOut() {
@@ -127,16 +163,43 @@ function handleSignOut() {
     gapi.client.setToken('');
   }
 
+  // Clear saved auth data but KEEP spreadsheet ID
+  localStorage.removeItem('lifequest_auth_token');
+  localStorage.removeItem('lifequest_user_data');
+
   document.getElementById('authSection').style.display = 'block';
   document.getElementById('appSection').style.display = 'none';
   currentUser = null;
-  spreadsheetId = null;
+  // Don't clear spreadsheetId - it will be found on next login
 }
 
-// Spreadsheet Management
+// ===== SPREADSHEET MANAGEMENT =====
 async function initializeSpreadsheet() {
   try {
-    // Check if user already has a Life Quest spreadsheet
+    // FIX: Check if user already has a saved spreadsheet ID
+    const savedSpreadsheetId = localStorage.getItem(`lifequest_spreadsheet_${currentUser.id}`);
+    
+    if (savedSpreadsheetId) {
+      // Try to access the existing spreadsheet
+      try {
+        const testResponse = await gapi.client.sheets.spreadsheets.get({
+          spreadsheetId: savedSpreadsheetId
+        });
+        
+        if (testResponse.result) {
+          // Spreadsheet exists and is accessible
+          spreadsheetId = savedSpreadsheetId;
+          console.log('✅ Using existing spreadsheet:', spreadsheetId);
+          return;
+        }
+      } catch (error) {
+        console.log('Saved spreadsheet not accessible, creating new one');
+        localStorage.removeItem(`lifequest_spreadsheet_${currentUser.id}`);
+      }
+    }
+
+    // Only create new spreadsheet if none exists or previous one is gone
+    console.log('Creating new spreadsheet...');
     const response = await gapi.client.sheets.spreadsheets.create({
       resource: {
         properties: {
@@ -153,16 +216,17 @@ async function initializeSpreadsheet() {
 
     spreadsheetId = response.result.spreadsheetId;
 
-    // Initialize headers and default data
+    // Initialize headers and default data for new spreadsheet
     await setupSpreadsheetHeaders();
     await initializeUserStats();
 
-    // Save spreadsheet ID to localStorage for future sessions
+    // Save spreadsheet ID to localStorage
     localStorage.setItem(`lifequest_spreadsheet_${currentUser.id}`, spreadsheetId);
+    console.log('✅ Created new spreadsheet:', spreadsheetId);
 
   } catch (error) {
-    console.error('Error creating spreadsheet:', error);
-    showNotification('❌ Failed to create Google Sheet. Please try again.');
+    console.error('Error with spreadsheet:', error);
+    showNotification('❌ Failed to access/create Google Sheet. Please try again.');
   }
 }
 
@@ -213,7 +277,7 @@ async function initializeUserStats() {
   });
 }
 
-// Data Loading
+// ===== DATA LOADING =====
 async function loadAllData() {
   try {
     updateSyncStatus('🔄 Loading data...');
@@ -297,7 +361,7 @@ async function loadImportantInfo() {
   }));
 }
 
-// Data Saving
+// ===== DATA SAVING =====
 async function saveTask(task) {
   try {
     const taskRow = [
@@ -350,7 +414,7 @@ async function updateTask(task) {
     const rowIndex = rows.findIndex((row, index) => index > 0 && row[0] === task.id);
 
     if (rowIndex !== -1) {
-      const actualRow = rowIndex + 1; // +1 because array is 0-indexed but sheets are 1-indexed
+      const actualRow = rowIndex + 1;
 
       const taskRow = [
         task.id,
@@ -385,7 +449,6 @@ async function updateTask(task) {
 
 async function deleteTaskFromSheet(taskId) {
   try {
-    // Find the row index for this task
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: spreadsheetId,
       range: 'Tasks!A:A',
@@ -403,7 +466,7 @@ async function deleteTaskFromSheet(taskId) {
           requests: [{
             deleteDimension: {
               range: {
-                sheetId: 0, // Tasks sheet
+                sheetId: 0,
                 dimension: 'ROWS',
                 startIndex: actualRow - 1,
                 endIndex: actualRow
@@ -446,6 +509,38 @@ async function saveUserStats() {
   }
 }
 
+async function saveInfo(info) {
+  try {
+    const infoRow = [
+      info.id,
+      info.title,
+      info.content,
+      info.category,
+      info.createdDate
+    ];
+
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: spreadsheetId,
+      range: 'Important_Info!A:A',
+    });
+
+    const nextRow = (response.result.values?.length || 1) + 1;
+
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: spreadsheetId,
+      range: `Important_Info!A${nextRow}:E${nextRow}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: {values: [infoRow]}
+    });
+
+    saveToLocalStorage();
+
+  } catch (error) {
+    console.error('Error saving info:', error);
+    throw error;
+  }
+}
+
 // Local Storage Backup
 function saveToLocalStorage() {
   if (currentUser) {
@@ -467,7 +562,9 @@ function loadFromLocalStorage() {
       appData.tasks = data.tasks || [];
       appData.userStats = data.userStats || appData.userStats;
       appData.importantInfo = data.importantInfo || [];
-      spreadsheetId = data.spreadsheetId;
+      if (data.spreadsheetId) {
+        spreadsheetId = data.spreadsheetId;
+      }
 
       renderTasks();
       renderImportantInfo();
@@ -478,7 +575,7 @@ function loadFromLocalStorage() {
   }
 }
 
-// Google Calendar Integration
+// ===== GOOGLE CALENDAR INTEGRATION =====
 async function addTaskToCalendar(task) {
   try {
     const event = {
@@ -489,7 +586,7 @@ async function addTaskToCalendar(task) {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
       end: {
-        dateTime: new Date(new Date(task.dueDate).getTime() + 60*60*1000).toISOString(), // +1 hour
+        dateTime: new Date(new Date(task.dueDate).getTime() + 60*60*1000).toISOString(),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
       reminders: {
@@ -524,7 +621,7 @@ async function addTaskToCalendar(task) {
   }
 }
 
-// UI Functions
+// ===== UI FUNCTIONS =====
 function setupEventListeners() {
   // Authentication
   document.getElementById('signInBtn').addEventListener('click', handleAuthClick);
@@ -698,12 +795,11 @@ function renderImportantInfo() {
   `).join('');
 }
 
-// Event Handlers
+// ===== EVENT HANDLERS =====
 function showAddTaskModal() {
   document.getElementById('taskModal').style.display = 'block';
   document.getElementById('taskForm').reset();
 
-  // Set default due date to tomorrow
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(9, 0, 0, 0);
@@ -735,7 +831,6 @@ async function handleTaskSubmission(e) {
       calendarEventId: null
     };
 
-    // Add to calendar if requested
     if (formData.get('addToCalendar') === 'on') {
       task.calendarEventId = await addTaskToCalendar(task);
     }
@@ -780,50 +875,15 @@ async function handleInfoSubmission(e) {
   }
 }
 
-async function saveInfo(info) {
-  try {
-    const infoRow = [
-      info.id,
-      info.title,
-      info.content,
-      info.category,
-      info.createdDate
-    ];
-
-    const response = await gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: spreadsheetId,
-      range: 'Important_Info!A:A',
-    });
-
-    const nextRow = (response.result.values?.length || 1) + 1;
-
-    await gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: spreadsheetId,
-      range: `Important_Info!A${nextRow}:E${nextRow}`,
-      valueInputOption: 'USER_ENTERED',
-      resource: {values: [infoRow]}
-    });
-
-    saveToLocalStorage();
-
-  } catch (error) {
-    console.error('Error saving info:', error);
-    throw error;
-  }
-}
-
 async function toggleTaskComplete(taskId) {
   const task = appData.tasks.find(t => t.id === taskId);
   if (task) {
     task.isCompleted = !task.isCompleted;
 
     if (task.isCompleted) {
-      // Award points based on priority
       let points = { 'High': 15, 'Medium': 10, 'Low': 5 }[task.priority];
       appData.userStats.currentPoints += points;
       appData.userStats.completedTasks += 1;
-
-      // Update level (every 100 points = 1 level)
       appData.userStats.level = Math.floor(appData.userStats.currentPoints / 100) + 1;
 
       await saveUserStats();
@@ -884,7 +944,7 @@ async function deleteInfoFromSheet(infoId) {
           requests: [{
             deleteDimension: {
               range: {
-                sheetId: 2, // Important_Info sheet
+                sheetId: 2,
                 dimension: 'ROWS',
                 startIndex: actualRow - 1,
                 endIndex: actualRow
@@ -983,7 +1043,6 @@ function showNotification(message) {
 
 // Initialize app when page loads
 document.addEventListener('DOMContentLoaded', function() {
-  // Load Google APIs
   if (typeof gapi !== 'undefined') {
     gapiLoaded();
   }
@@ -991,12 +1050,4 @@ document.addEventListener('DOMContentLoaded', function() {
     gisLoaded();
   }
 });
-
-
-
-
-
-
-
-
 
