@@ -15,7 +15,6 @@ const SCOPES =
   'https://www.googleapis.com/auth/spreadsheets ' +
   'https://www.googleapis.com/auth/calendar';
 
-// Your Google Cloud Project credentials
 const CLIENT_ID = "774756685824-gumlet0m3gqtk7fb9b181a7cpe6ioh6t.apps.googleusercontent.com";
 const API_KEY = "AIzaSyCVaEWYpxyx1vFTUzrPTXCKlLWlMdr1F18";
 
@@ -25,6 +24,14 @@ let gapiInited = false;
 let gisInited = false;
 let currentUser = null;
 let spreadsheetId = null;
+
+// FIX #1: Guard flags to prevent double-initialization
+// maybeEnableButtons() is called twice (once by gapiLoaded, once by gisLoaded).
+// Without these flags, setupEventListeners() and checkSavedAuth() run twice,
+// causing duplicate event listeners (double form submissions, double modal opens, etc.)
+let listenersSetup = false;
+let authCheckDone = false;
+
 let appData = {
   tasks: [],
   userStats: {
@@ -70,38 +77,44 @@ function gisLoaded() {
 function maybeEnableButtons() {
   if (gapiInited && gisInited) {
     document.getElementById('signInBtn').style.display = 'block';
-    setupEventListeners();
-    // Check for saved authentication
-    checkSavedAuth();
+
+    // FIX #1 applied: only run once even though this function is called twice
+    if (!listenersSetup) {
+      listenersSetup = true;
+      setupEventListeners();
+    }
+    if (!authCheckDone) {
+      authCheckDone = true;
+      checkSavedAuth();
+    }
   }
 }
 
-// Check for saved auth on page load
+// Check for saved auth on page load (remember me)
 async function checkSavedAuth() {
   const savedToken = localStorage.getItem('lifequest_auth_token');
   const savedUser = localStorage.getItem('lifequest_user_data');
-  
+
   if (savedToken && savedUser) {
     try {
-      // Set the saved token
       gapi.client.setToken(JSON.parse(savedToken));
       currentUser = JSON.parse(savedUser);
-      
+
       // Verify token is still valid
       const response = await gapi.client.request({
         'path': 'https://www.googleapis.com/oauth2/v2/userinfo',
       });
-      
+
       if (response.result) {
-        // Token is valid, auto-sign in
         await continueSignIn();
         showNotification('✅ Automatically signed in!');
       }
     } catch (error) {
-      // Token expired, clear saved data
+      // Token expired — clear auth but keep spreadsheet ID
       localStorage.removeItem('lifequest_auth_token');
       localStorage.removeItem('lifequest_user_data');
-      console.log('Saved token expired');
+      currentUser = null;
+      console.log('Saved token expired, please sign in again.');
     }
   }
 }
@@ -123,14 +136,13 @@ function handleAuthClick() {
 
 async function handleSignIn() {
   try {
-    // Get user info
     const response = await gapi.client.request({
       'path': 'https://www.googleapis.com/oauth2/v2/userinfo',
     });
 
     currentUser = response.result;
-    
-    // Save auth data for "remember me"
+
+    // Save auth data for remember me
     const token = gapi.client.getToken();
     localStorage.setItem('lifequest_auth_token', JSON.stringify(token));
     localStorage.setItem('lifequest_user_data', JSON.stringify(currentUser));
@@ -145,13 +157,11 @@ async function handleSignIn() {
 }
 
 async function continueSignIn() {
-  // Update UI
   document.getElementById('authSection').style.display = 'none';
   document.getElementById('appSection').style.display = 'block';
   document.getElementById('userName').textContent = currentUser.name;
   document.getElementById('userPhoto').src = currentUser.picture;
 
-  // Initialize or retrieve spreadsheet
   await initializeSpreadsheet();
   await loadAllData();
 }
@@ -163,42 +173,55 @@ function handleSignOut() {
     gapi.client.setToken('');
   }
 
-  // Clear saved auth data but KEEP spreadsheet ID
+  // Clear auth tokens ONLY — keep spreadsheet ID so it's recalled on next login
   localStorage.removeItem('lifequest_auth_token');
   localStorage.removeItem('lifequest_user_data');
 
   document.getElementById('authSection').style.display = 'block';
   document.getElementById('appSection').style.display = 'none';
+
+  // FIX #2: Reset in-memory state so stale data isn't shown if another
+  // user logs in during the same browser session
   currentUser = null;
-  // Don't clear spreadsheetId - it will be found on next login
+  spreadsheetId = null;
+  appData.tasks = [];
+  appData.importantInfo = [];
+  appData.userStats = {
+    currentPoints: 0,
+    currentStreak: 0,
+    level: 1,
+    completedTasks: 0,
+    lastActivityDate: null
+  };
 }
 
 // ===== SPREADSHEET MANAGEMENT =====
 async function initializeSpreadsheet() {
   try {
-    // FIX: Check if user already has a saved spreadsheet ID
+    // FIX #3 (core bug): Always check localStorage FIRST.
+    // The original code always called .create() regardless, producing a new
+    // spreadsheet on every single login. Now we only create if no saved ID exists
+    // or if the saved sheet is no longer accessible.
     const savedSpreadsheetId = localStorage.getItem(`lifequest_spreadsheet_${currentUser.id}`);
-    
+
     if (savedSpreadsheetId) {
-      // Try to access the existing spreadsheet
       try {
         const testResponse = await gapi.client.sheets.spreadsheets.get({
           spreadsheetId: savedSpreadsheetId
         });
-        
         if (testResponse.result) {
-          // Spreadsheet exists and is accessible
           spreadsheetId = savedSpreadsheetId;
           console.log('✅ Using existing spreadsheet:', spreadsheetId);
-          return;
+          return; // Exit — no new sheet created
         }
       } catch (error) {
-        console.log('Saved spreadsheet not accessible, creating new one');
+        // Sheet was deleted or is inaccessible — fall through to create a new one
+        console.log('Saved spreadsheet not accessible, creating new one...');
         localStorage.removeItem(`lifequest_spreadsheet_${currentUser.id}`);
       }
     }
 
-    // Only create new spreadsheet if none exists or previous one is gone
+    // Only reaches here when no valid saved sheet exists
     console.log('Creating new spreadsheet...');
     const response = await gapi.client.sheets.spreadsheets.create({
       resource: {
@@ -215,12 +238,10 @@ async function initializeSpreadsheet() {
     });
 
     spreadsheetId = response.result.spreadsheetId;
-
-    // Initialize headers and default data for new spreadsheet
     await setupSpreadsheetHeaders();
     await initializeUserStats();
 
-    // Save spreadsheet ID to localStorage
+    // Persist the new sheet ID
     localStorage.setItem(`lifequest_spreadsheet_${currentUser.id}`, spreadsheetId);
     console.log('✅ Created new spreadsheet:', spreadsheetId);
 
@@ -263,7 +284,7 @@ async function setupSpreadsheetHeaders() {
 async function initializeUserStats() {
   const statsData = [
     ['Current Points', 0],
-    ['Current Streak', 0], 
+    ['Current Streak', 0],
     ['Level', 1],
     ['Completed Tasks', 0],
     ['Last Activity Date', new Date().toISOString()]
@@ -297,7 +318,7 @@ async function loadAllData() {
   } catch (error) {
     console.error('Error loading data:', error);
     updateSyncStatus('❌ Sync failed');
-    loadFromLocalStorage(); // Fallback to local storage
+    loadFromLocalStorage();
   }
 }
 
@@ -379,7 +400,6 @@ async function saveTask(task) {
       task.calendarEventId || ''
     ];
 
-    // Find next empty row
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: spreadsheetId,
       range: 'Tasks!A:A',
@@ -404,7 +424,6 @@ async function saveTask(task) {
 
 async function updateTask(task) {
   try {
-    // Find the row index for this task
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: spreadsheetId,
       range: 'Tasks!A:A',
@@ -489,7 +508,7 @@ async function saveUserStats() {
   try {
     const statsData = [
       ['Current Points', appData.userStats.currentPoints],
-      ['Current Streak', appData.userStats.currentStreak], 
+      ['Current Streak', appData.userStats.currentStreak],
       ['Level', appData.userStats.level],
       ['Completed Tasks', appData.userStats.completedTasks],
       ['Last Activity Date', new Date().toISOString()]
@@ -541,7 +560,7 @@ async function saveInfo(info) {
   }
 }
 
-// Local Storage Backup
+// ===== LOCAL STORAGE BACKUP =====
 function saveToLocalStorage() {
   if (currentUser) {
     const data = {
@@ -623,18 +642,15 @@ async function addTaskToCalendar(task) {
 
 // ===== UI FUNCTIONS =====
 function setupEventListeners() {
-  // Authentication
   document.getElementById('signInBtn').addEventListener('click', handleAuthClick);
   document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
 
-  // Tab navigation
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', function() {
       switchTab(this.dataset.tab);
     });
   });
 
-  // Modals
   document.getElementById('addTaskBtn').addEventListener('click', showAddTaskModal);
   document.getElementById('addInfoBtn').addEventListener('click', showAddInfoModal);
 
@@ -644,16 +660,13 @@ function setupEventListeners() {
     });
   });
 
-  // Forms
   document.getElementById('taskForm').addEventListener('submit', handleTaskSubmission);
   document.getElementById('infoForm').addEventListener('submit', handleInfoSubmission);
 
-  // Recurring task checkbox
   document.getElementById('taskRecurring').addEventListener('change', function() {
     document.getElementById('recurringType').disabled = !this.checked;
   });
 
-  // Calendar sync
   document.getElementById('syncCalendarBtn').addEventListener('click', syncWithCalendar);
 }
 
@@ -684,7 +697,6 @@ function updateDailyProgress() {
   const todayTasks = appData.tasks.filter(task => task.category === 'Today');
   const completedTodayTasks = todayTasks.filter(task => task.isCompleted);
   const progress = todayTasks.length > 0 ? (completedTodayTasks.length / todayTasks.length) * 100 : 0;
-
   document.getElementById('dailyProgress').style.width = progress + '%';
 }
 
@@ -739,8 +751,8 @@ function createTaskHTML(task) {
     <div class="task-item ${task.isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
       <div class="task-header" onclick="toggleTaskDetails('${task.id}')">
         <div class="task-left">
-          <button class="task-checkbox ${task.isCompleted ? 'checked' : ''}" 
-                  onclick="event.stopPropagation(); toggleTaskComplete('${task.id}')" 
+          <button class="task-checkbox ${task.isCompleted ? 'checked' : ''}"
+                  onclick="event.stopPropagation(); toggleTaskComplete('${task.id}')"
                   aria-label="Mark task complete">
             ${task.isCompleted ? '✓' : ''}
           </button>
@@ -755,7 +767,7 @@ function createTaskHTML(task) {
           </div>
         </div>
         <div class="task-actions">
-          <button class="delete-btn" onclick="event.stopPropagation(); deleteTask('${task.id}')" 
+          <button class="delete-btn" onclick="event.stopPropagation(); deleteTask('${task.id}')"
                   title="Delete task">🗑️</button>
           <button class="expand-btn">▼</button>
         </div>
@@ -881,7 +893,7 @@ async function toggleTaskComplete(taskId) {
     task.isCompleted = !task.isCompleted;
 
     if (task.isCompleted) {
-      let points = { 'High': 15, 'Medium': 10, 'Low': 5 }[task.priority];
+      const points = { 'High': 15, 'Medium': 10, 'Low': 5 }[task.priority];
       appData.userStats.currentPoints += points;
       appData.userStats.completedTasks += 1;
       appData.userStats.level = Math.floor(appData.userStats.currentPoints / 100) + 1;
