@@ -1,243 +1,274 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Life Quest - Google Sheets Edition</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Life Quest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="app-container">
-        <!-- Authentication Section -->
-        <div id="authSection" class="auth-section">
-            <div class="auth-container">
-                <div class="auth-header">
-                    <h1>🎯 Life Quest</h1>
-                    <p>Your gamified task manager powered by Google Sheets</p>
-                </div>
-                <div class="auth-content">
-                    <div class="auth-benefits">
-                        <div class="benefit-item">
-                            <span class="benefit-icon">☁️</span>
-                            <span>Cloud sync with Google Sheets</span>
-                        </div>
-                        <div class="benefit-item">
-                            <span class="benefit-icon">📅</span>
-                            <span>Google Calendar integration</span>
-                        </div>
-                        <div class="benefit-item">
-                            <span class="benefit-icon">🎮</span>
-                            <span>Gamified productivity tracking</span>
-                        </div>
-                    </div>
-                    <button id="signInBtn" class="sign-in-btn">
-                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-logo">
-                        Sign in with Google
-                    </button>
-                </div>
-            </div>
-        </div>
 
-        <!-- Main App Section -->
-        <div id="appSection" class="app-section" style="display: none;">
-            <!-- Header with Gamification Stats -->
-            <header class="app-header">
-                <div class="container">
-                    <div class="header-content">
-                        <div class="app-title">
-                            <h1>🎯 Life Quest</h1>
-                            <div class="sync-status">
-                                <span id="syncStatus" class="sync-indicator">🔄 Syncing...</span>
-                            </div>
-                        </div>
-                        <div class="user-info">
-                            <img id="userPhoto" class="user-photo" alt="User">
-                            <span id="userName" class="user-name"></span>
-                            <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
-                        </div>
-                        <div class="stats-bar">
-                            <div class="stat-item">
-                                <span class="stat-icon">⭐</span>
-                                <span class="stat-value" id="points">0</span>
-                                <span class="stat-label">Points</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-icon">🔥</span>
-                                <span class="stat-value" id="streak">0</span>
-                                <span class="stat-label">Day Streak</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-icon">📊</span>
-                                <span class="stat-value" id="level">Level 1</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="dailyProgress"></div>
-                        </div>
-                        <span class="progress-text">Daily Progress</span>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Navigation Tabs -->
-            <nav class="nav-tabs">
-                <div class="container">
-                    <button class="nav-tab active" data-tab="tasks">📋 Tasks</button>
-                    <button class="nav-tab" data-tab="info">💡 Important Info</button>
-                    <button class="nav-tab" data-tab="calendar">📅 Calendar</button>
-                </div>
-            </nav>
-
-            <!-- Tab Content -->
-            <main class="main-content">
-                <div class="container">
-                    <!-- Tasks Tab -->
-                    <div id="tasksTab" class="tab-content active">
-                        <div class="tab-header">
-                            <h2>My Tasks</h2>
-                            <button id="addTaskBtn" class="add-btn">+ Add Task</button>
-                        </div>
-                        <div id="tasksList" class="tasks-list">
-                            <div class="loading">Loading tasks...</div>
-                        </div>
-                    </div>
-
-                    <!-- Important Info Tab -->
-                    <div id="infoTab" class="tab-content">
-                        <div class="tab-header">
-                            <h2>Important Information</h2>
-                            <button id="addInfoBtn" class="add-btn">+ Add Info</button>
-                        </div>
-                        <div id="importantInfoList" class="info-list">
-                            <div class="loading">Loading information...</div>
-                        </div>
-                    </div>
-
-                    <!-- Calendar Tab -->
-                    <div id="calendarTab" class="tab-content">
-                        <div class="tab-header">
-                            <h2>Calendar Integration</h2>
-                            <button id="syncCalendarBtn" class="sync-btn">🔄 Sync with Calendar</button>
-                        </div>
-                        <div class="calendar-info">
-                            <p>Your tasks with deadlines will be automatically synced to Google Calendar.</p>
-                            <div id="calendarEvents" class="calendar-events">
-                                <div class="loading">Loading calendar events...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-
-        <!-- Task Modal -->
-        <div id="taskModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add New Task</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <form id="taskForm">
-                    <div class="form-group">
-                        <label for="taskTitle">Title *</label>
-                        <input type="text" id="taskTitle" name="title" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="taskDescription">Description</label>
-                        <textarea id="taskDescription" name="description" rows="3"></textarea>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="taskPriority">Priority *</label>
-                            <select id="taskPriority" name="priority" required>
-                                <option value="High">High</option>
-                                <option value="Medium" selected>Medium</option>
-                                <option value="Low">Low</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="taskDueDate">Due Date *</label>
-                            <input type="datetime-local" id="taskDueDate" name="dueDate" required>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="taskRecurring" name="isRecurring">
-                                Recurring Task
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label for="recurringType">Repeat Every</label>
-                            <select id="recurringType" name="recurringType" disabled>
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="addToCalendar" name="addToCalendar" checked>
-                            Add to Google Calendar
-                        </label>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn-secondary close-modal">Cancel</button>
-                        <button type="submit" class="btn-primary">Add Task</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Info Modal -->
-        <div id="infoModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add Important Information</h3>
-                    <button class="close-modal">&times;</button>
-                </div>
-                <form id="infoForm">
-                    <div class="form-group">
-                        <label for="infoTitle">Title *</label>
-                        <input type="text" id="infoTitle" name="title" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="infoContent">Content *</label>
-                        <textarea id="infoContent" name="content" rows="5" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="infoCategory">Category</label>
-                        <input type="text" id="infoCategory" name="category" placeholder="e.g., Work, Personal, Health">
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn-secondary close-modal">Cancel</button>
-                        <button type="submit" class="btn-primary">Add Information</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Notification Container -->
-        <div id="notifications" class="notifications"></div>
+  <!-- ===== AUTH SCREEN ===== -->
+  <div id="authSection" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-label="Life Quest logo">
+          <rect width="48" height="48" rx="14" fill="var(--color-primary)"/>
+          <path d="M14 34 L24 14 L34 34" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="24" cy="28" r="3" fill="white"/>
+        </svg>
+        <span class="auth-brand">Life Quest</span>
+      </div>
+      <h1 class="auth-title">Level up your life</h1>
+      <p class="auth-subtitle">Track tasks, earn points, and sync everything to your Google Sheets — automatically.</p>
+      <button id="signInBtn" class="btn btn-primary btn-google" style="display:none">
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.259c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        Sign in with Google
+      </button>
+      <p class="auth-note">Your data is stored in your own Google Sheets. We never store anything on our servers.</p>
     </div>
-   <script src="sheets-app.js"></script>
+  </div>
 
-  <!-- 2) Load Google API without async/defer so gapi is fully ready -->
-  <script
-    src="https://apis.google.com/js/api.js"
-    onload="gapiLoaded()">
-  </script>
+  <!-- ===== APP SCREEN ===== -->
+  <div id="appSection" style="display:none">
 
-  <!-- 3) Load Google Identity Services also synchronously -->
-  <script
-    src="https://accounts.google.com/gsi/client"
-    onload="gisLoaded()">
-  </script>
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="header-logo">
+          <svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-label="Life Quest">
+            <rect width="48" height="48" rx="14" fill="var(--color-primary)"/>
+            <path d="M14 34 L24 14 L34 34" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="24" cy="28" r="3" fill="white"/>
+          </svg>
+          <span class="header-brand">Life Quest</span>
+        </div>
+      </div>
+      <div class="header-center">
+        <div class="stat-pill"><span class="stat-icon">⚡</span><span id="points">0</span> pts</div>
+        <div class="stat-pill"><span class="stat-icon">🔥</span><span id="streak">0</span> day streak</div>
+        <div class="stat-pill level-pill"><span id="level">Level 1</span></div>
+      </div>
+      <div class="header-right">
+        <span id="syncStatus" class="sync-status">✅ Synced</span>
+        <img id="userPhoto" src="" alt="User" class="user-avatar" />
+        <span id="userName" class="user-name"></span>
+        <button id="signOutBtn" class="btn btn-ghost btn-sm">Sign out</button>
+      </div>
+    </header>
 
-    
+    <!-- Daily Progress Bar -->
+    <div class="progress-bar-wrapper">
+      <div id="dailyProgress" class="progress-bar-fill"></div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="app-main">
+
+      <!-- Sidebar Nav -->
+      <nav class="sidebar">
+        <button class="nav-tab active" data-tab="tasks">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Tasks
+        </button>
+        <button class="nav-tab" data-tab="info">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Important Info
+        </button>
+        <button class="nav-tab" data-tab="achievements">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+          Achievements
+        </button>
+        <div class="sidebar-divider"></div>
+        <button id="syncCalendarBtn" class="nav-tab nav-action">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Sync Calendar
+        </button>
+      </nav>
+
+      <!-- Tab Contents -->
+      <div class="tab-area">
+
+        <!-- Tasks Tab -->
+        <div id="tasksTab" class="tab-content active">
+          <div class="tab-header">
+            <h2 class="tab-title">Tasks</h2>
+            <button id="addTaskBtn" class="btn btn-primary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Task
+            </button>
+          </div>
+          <div id="tasksList" class="tasks-list"></div>
+        </div>
+
+        <!-- Important Info Tab -->
+        <div id="infoTab" class="tab-content">
+          <div class="tab-header">
+            <h2 class="tab-title">Important Info</h2>
+            <button id="addInfoBtn" class="btn btn-primary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Note
+            </button>
+          </div>
+          <div id="importantInfoList" class="info-list"></div>
+        </div>
+
+        <!-- Achievements Tab -->
+        <div id="achievementsTab" class="tab-content">
+          <div class="tab-header">
+            <h2 class="tab-title">Achievements</h2>
+          </div>
+          <div class="achievements-grid">
+            <div class="achievement-card" id="ach-1">
+              <div class="ach-icon">👣</div>
+              <div class="ach-body">
+                <div class="ach-name">First Steps</div>
+                <div class="ach-desc">Complete your first task</div>
+              </div>
+              <div class="ach-badge">🔒</div>
+            </div>
+            <div class="achievement-card" id="ach-2">
+              <div class="ach-icon">🔥</div>
+              <div class="ach-body">
+                <div class="ach-name">Consistency</div>
+                <div class="ach-desc">Maintain a 7-day streak</div>
+              </div>
+              <div class="ach-badge">🔒</div>
+            </div>
+            <div class="achievement-card" id="ach-3">
+              <div class="ach-icon">⭐</div>
+              <div class="ach-body">
+                <div class="ach-name">High Achiever</div>
+                <div class="ach-desc">Earn 1000 points</div>
+              </div>
+              <div class="ach-badge">🔒</div>
+            </div>
+            <div class="achievement-card" id="ach-4">
+              <div class="ach-icon">🏆</div>
+              <div class="ach-body">
+                <div class="ach-name">Task Master</div>
+                <div class="ach-desc">Complete 50 tasks</div>
+              </div>
+              <div class="ach-badge">🔒</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Add Task Modal -->
+  <div id="taskModal" class="modal" role="dialog" aria-labelledby="taskModalTitle" aria-modal="true">
+    <div class="modal-backdrop close-modal"></div>
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="taskModalTitle">New Task</h3>
+        <button class="modal-close close-modal" aria-label="Close modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="taskForm" class="modal-form" novalidate>
+        <div class="form-group">
+          <label for="taskTitle">Title <span class="required">*</span></label>
+          <input type="text" id="taskTitle" name="title" placeholder="What needs to be done?" required autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="taskDescription">Description</label>
+          <textarea id="taskDescription" name="description" placeholder="Add details..." rows="3"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskPriority">Priority</label>
+            <select id="taskPriority" name="priority">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="taskDueDate">Due Date <span class="required">*</span></label>
+            <input type="datetime-local" id="taskDueDate" name="dueDate" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-check">
+            <label class="check-label">
+              <input type="checkbox" id="taskRecurring" name="isRecurring" />
+              <span>Recurring task</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="recurringType">Recurring Type</label>
+            <select id="recurringType" name="recurringType" disabled>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group form-check">
+          <label class="check-label">
+            <input type="checkbox" id="addToCalendar" name="addToCalendar" />
+            <span>Add to Google Calendar</span>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost close-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Info Modal -->
+  <div id="infoModal" class="modal" role="dialog" aria-labelledby="infoModalTitle" aria-modal="true">
+    <div class="modal-backdrop close-modal"></div>
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="infoModalTitle">New Note</h3>
+        <button class="modal-close close-modal" aria-label="Close modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="infoForm" class="modal-form" novalidate>
+        <div class="form-group">
+          <label for="infoTitle">Title <span class="required">*</span></label>
+          <input type="text" id="infoTitle" name="title" placeholder="Note title" required autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="infoContent">Content <span class="required">*</span></label>
+          <textarea id="infoContent" name="content" placeholder="Write your note..." rows="5" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="infoCategory">Category</label>
+          <input type="text" id="infoCategory" name="category" placeholder="e.g. Finance, Health, Work..." autocomplete="off" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost close-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Note</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div id="notifications" class="notifications" aria-live="polite"></div>
+
+  <!-- Scripts: app first, then Google APIs (no async/defer on Google APIs) -->
+  <script src="sheets-app.js"></script>
+  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
